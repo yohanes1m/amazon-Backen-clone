@@ -46,7 +46,7 @@ function Cart() {
                     product={item}
                     renderDesc={true}
                     flex={true}
-                    key={i}
+                    key={item.id}
                     renderAdd={false}
                   />
                   <div className={classes.btn_container}>
@@ -55,7 +55,7 @@ function Cart() {
                       onClick={() => increment(item)}
                     >
                       <IoIosArrowUp size={20} />
-                    </button> 
+                    </button>
                     <span>{item.amount}</span>
                     <button
                       className={classes.btn}

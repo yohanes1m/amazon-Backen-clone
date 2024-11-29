@@ -16,7 +16,7 @@ app.get("/", (req, res) => {
 });
 
 app.post("/payment/create", async (req, res) => {
-  const total = req.query.total;
+  const total = parseInt(req.query.total);
   if (total > 0) {
     // console.log("payment is received",total);
     // res.send(total)

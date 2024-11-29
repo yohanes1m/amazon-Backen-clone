@@ -5,7 +5,11 @@ import { DataContext } from "../../components/DataProvider/DataProvider";
 import ProductCard from "../../components/Product/ProductCard";
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import CurrencyFormat from "../../components/Currencyformat/CurrencyFormat";
-
+import { axiosInstance } from "../../Api/axios";
+import { ClipLoader } from "react-spinners";
+import { db } from "../../Utility/firebase";
+import { useNavigate } from "react-router-dom";
+import { Type } from "../../Utility/action.type";
 function Payment() {
   const [{ user, basket }, dispatch] = useContext(DataContext);
 
@@ -20,22 +24,64 @@ function Payment() {
   const stripe = useStripe();
   const elements = useElements();
 
+  const navigate = useNavigate();
+
   const [cardError, setCardError] = useState("");
+
   const handleChange = (e) => {
     // console.log(e);
     e.error?.message ? setCardError(e.error?.message) : setCardError("");
   };
-  const handlePayment = (e) => {
+
+  const [processing, setProcessing] = useState(false);
+
+  const handlePayment = async (e) => {
     e.preventDefault();
+    try {
+      setProcessing(true);
+      // 1.backend or functions -----> contact to get client secret
+      const response = await axiosInstance({
+        method: "POST",
+        url: `/payment/create?total=${total * 100}`,
+      });
+      // console.log(response.data);
+      const clientSecret = response.data?.clientSecret;
 
-    // 1.backend or functions -----> contact to get client secret
+      //2.client side confirmation using stripe
 
+      const { paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: elements.getElement(CardElement),
+        },
+      });
+      // console.log(confirmation);
 
-    
-    //2.client side confirmation using stripe
+      // 3. after the confirmation ---> order firestore database save, clear basket
 
-    // 3. after the confirmation ---> order firestore database save, clear basket
+      await db
+        .collection("users")
+        .doc(user.uid)
+        .collection("orders")
+        .doc(paymentIntent.id)
+        .set({
+          basket: basket,
+          amount: paymentIntent.amount,
+          created: paymentIntent.created,
+        });
+
+      // empty in the basket
+      dispatch({
+        type: Type.EMPTY_BASKET,
+      });
+
+      setProcessing(false);
+      navigate("/orders", { state: { msg: "you have placed new order" } });
+    } catch (error) {
+      console.log(error);
+      setProcessing(false);
+    }
   };
+
   return (
     <LayOut>
       {/* header */}
@@ -82,7 +128,16 @@ function Payment() {
                       Total Order | <CurrencyFormat amount={total} />
                     </span>
                   </div>
-                  <button>Pay Now</button>
+                  <button type="submit">
+                    {processing ? (
+                      <div className={classes.loading}>
+                        <ClipLoader color="gray" size={12} />
+                        <p>Please Wait ...</p>
+                      </div>
+                    ) : (
+                      "Pay Now"
+                    )}
+                  </button>
                 </div>
               </form>
             </div>
