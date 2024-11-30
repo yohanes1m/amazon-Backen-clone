@@ -18,6 +18,7 @@ const stripePromise = loadStripe(
 function Routing() {
   return (
     <Router>
+      
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<Auth />} />
